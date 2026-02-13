@@ -1,0 +1,48 @@
+import telebot
+import time
+import random
+from datetime import datetime, timedelta
+import threading
+import os
+
+TOKEN = os.environ.get('BOT_TOKEN')
+bot = telebot.TeleBot(TOKEN)
+
+users = []
+next_crash = datetime.now() + timedelta(seconds=45)
+
+@bot.message_handler(commands=['start'])
+def start(message):
+    chat_id = message.chat.id
+    if chat_id not in users:
+        users.append(chat_id)
+    bot.reply_to(message, "✅ Bot started!")
+
+@bot.message_handler(commands=['time'])
+def time(message):
+    global next_crash
+    now = datetime.now()
+    sec = int((next_crash - now).total_seconds())
+    bot.reply_to(message, f"⏱ Time: {sec}s")
+
+def signals():
+    global next_crash
+    while True:
+        now = datetime.now()
+        diff = (next_crash - now).total_seconds()
+        
+        if 4.5 < diff < 5.5:
+            pred = round(random.uniform(1.5, 3.0), 2)
+            for uid in users:
+                try:
+                    bot.send_message(uid, f"🚨 5s left! Cash out: {pred}x")
+                except: pass
+            next_crash = now + timedelta(seconds=random.randint(35, 55))
+        
+        if diff <= 0:
+            next_crash = now + timedelta(seconds=random.randint(35, 55))
+        
+        time.sleep(0.5)
+
+threading.Thread(target=signals).start()
+bot.polling()
